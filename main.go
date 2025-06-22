@@ -1,10 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"log/slog"
 	"net"
+	"time"
+
+	"github.com/adityapandey23/redis-clone/client"
 )
 
 const defaultListenAddr = ":5001"
@@ -47,13 +50,22 @@ func (s *Server) Start() error {
 
 	go s.loop()
 
-	slog.Info("Server Running", "listenAddr", s.Config.ListenAddr)
+	slog.Info("server running", "listenAddr", s.Config.ListenAddr)
 
 	return s.acceptLoop()
 }
 
 func (s *Server) handleRawMessage(rawMsg []byte) error {
-	fmt.Print(string(rawMsg))
+	cmd, err := parseCommand(string(rawMsg))
+	if err != nil {
+		return err
+	}
+
+	switch v := cmd.(type) {
+	case SetCommand:
+		slog.Info("set command received", "key", v.key, "val", v.val)
+	}
+
 	return nil
 }
 
@@ -62,7 +74,7 @@ func (s *Server) loop() {
 		select {
 		case rawMsg := <-s.msgChn:
 			if err := s.handleRawMessage(rawMsg); err != nil {
-				slog.Error("Raw message error", err)
+				slog.Error("raw message error", "error", err.Error())
 			}
 		case <-s.quitChn:
 			return
@@ -76,10 +88,10 @@ func (s *Server) acceptLoop() error {
 	for {
 		conn, err := s.ln.Accept()
 		if err != nil {
-			slog.Error("Accept error", "err", err)
+			slog.Error("accept error", "err", err)
 			continue
 		}
-		slog.Info("Peer connection initiated")
+		slog.Info("peer connection initiated")
 		go s.handleConn(conn)
 	}
 }
@@ -87,11 +99,23 @@ func (s *Server) acceptLoop() error {
 func (s *Server) handleConn(conn net.Conn) {
 	peer := NewPeer(conn, s.msgChn)
 	s.addPeerCh <- peer
-	slog.Info("Peer connected", "remoteAddr", conn.RemoteAddr())
+	slog.Info("peer connected", "remoteAddr", conn.RemoteAddr())
 	go peer.readLoop()
 }
 
 func main() {
-	server := NewServer(Config{})
-	log.Fatal(server.Start())
+	go func() {
+		server := NewServer(Config{})
+		log.Fatal(server.Start())
+	}()
+
+	time.Sleep(time.Second)
+
+	client := client.New("localhost:5001")
+
+	if err := client.Set(context.TODO(), "foo", "bar"); err != nil {
+		log.Fatal(err)
+	}
+
+	select {} // we are blocking here
 }
