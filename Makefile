@@ -1,6 +1,9 @@
 run: build
-	@./bin/redis-clone
+	@./bin/redis-clone --listenAddr :5002
 
-build:
+build: clean
 	@go build -o bin/redis-clone .
+
+clean:
+	@go clean -testcache
 
