@@ -25,14 +25,14 @@ func New(addr string) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) Set(ctx context.Context, key string, val string) error {
+func (c *Client) Set(ctx context.Context, key interface{}, val interface{}) error {
 
 	buf := &bytes.Buffer{} // Didn't use var buf *bytes.Buffer because nil pointer, this will lead to runtime panic when we try to write something!
 	wr := resp.NewWriter(buf)
 	wr.WriteArray([]resp.Value{
-		resp.StringValue("SET"),
-		resp.StringValue(key),
-		resp.StringValue(val),
+		resp.AnyValue("SET"),
+		resp.AnyValue(key),
+		resp.AnyValue(val),
 	})
 
 	_, err := io.Copy(c.conn, buf) // Now whenever we dial the client, we can reuse the connection
@@ -40,13 +40,13 @@ func (c *Client) Set(ctx context.Context, key string, val string) error {
 	return err
 }
 
-func (c *Client) Get(ctx context.Context, key string) (string, error) {
+func (c *Client) Get(ctx context.Context, key interface{}) (string, error) {
 
 	buf := &bytes.Buffer{} // Didn't use var buf *bytes.Buffer because nil pointer, this will lead to runtime panic when we try to write something!
 	wr := resp.NewWriter(buf)
 	wr.WriteArray([]resp.Value{
-		resp.StringValue("GET"),
-		resp.StringValue(key),
+		resp.AnyValue("GET"),
+		resp.AnyValue(key),
 	})
 
 	_, err := io.Copy(c.conn, buf)
