@@ -74,7 +74,7 @@ func (s *Server) handleMessage(msg Message) error {
 
 		_, err := msg.peer.Send(val)
 		if err != nil {
-			slog.Error("peer send error", "err", err)
+			return fmt.Errorf("error: %s", err.Error())
 		}
 
 	}
@@ -87,7 +87,7 @@ func (s *Server) loop() {
 		select {
 		case msg := <-s.msgChn:
 			if err := s.handleMessage(msg); err != nil {
-				slog.Error("raw message error", "error", err.Error())
+				slog.Error("message error", "error", err.Error())
 			}
 		case peer := <-s.delPeerCh:
 			slog.Info("peer disconnected", "remoteAddr", peer.conn.RemoteAddr())
@@ -106,7 +106,7 @@ func (s *Server) acceptLoop() error {
 			slog.Error("accept error", "err", err)
 			continue
 		}
-		// slog.Info("peer connection initiated")
+		slog.Info("peer connection initiated")
 		go s.handleConn(conn)
 	}
 }
@@ -114,7 +114,7 @@ func (s *Server) acceptLoop() error {
 func (s *Server) handleConn(conn net.Conn) {
 	peer := NewPeer(conn, s.msgChn, s.delPeerCh)
 	s.addPeerCh <- peer
-	// slog.Info("peer connected", "remoteAddr", conn.RemoteAddr())
+	slog.Info("peer connected", "remoteAddr", conn.RemoteAddr())
 	go peer.readLoop()
 }
 
