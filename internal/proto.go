@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"bytes"
@@ -6,20 +6,18 @@ import (
 )
 
 const (
-	CommandSet   = "SET"
-	CommandGet   = "GET"
-	CommandHELLO = "hello"
+	CommandSet = "SET"
+	CommandGet = "GET"
 )
 
-type Command interface {
-}
+type Command interface{}
 
 type SetCommand struct {
-	key, val []byte
+	Key, Val []byte
 }
 
 type GetCommand struct {
-	key []byte
+	Key []byte
 }
 
 func respWriteMap(m map[string]string) string {

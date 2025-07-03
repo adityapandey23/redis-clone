@@ -1,33 +1,32 @@
-package main
+package internal
 
 import (
 	"fmt"
+	"github.com/tidwall/resp"
 	"io"
 	"net"
-
-	"github.com/tidwall/resp"
 )
 
 type Peer struct {
-	conn   net.Conn
+	Conn   net.Conn
 	msgChn chan Message
 	delChn chan *Peer
 }
 
 func NewPeer(conn net.Conn, msgChn chan Message, delChn chan *Peer) *Peer {
 	return &Peer{
-		conn:   conn,
+		Conn:   conn,
 		msgChn: msgChn,
 		delChn: delChn,
 	}
 }
 
 func (p *Peer) Send(msg []byte) (int, error) {
-	return p.conn.Write(msg)
+	return p.Conn.Write(msg)
 }
 
-func (p *Peer) readLoop() error {
-	rd := resp.NewReader(p.conn)
+func (p *Peer) ReadLoop() error {
+	rd := resp.NewReader(p.Conn)
 
 	for {
 		v, _, err := rd.ReadValue()
@@ -46,26 +45,25 @@ func (p *Peer) readLoop() error {
 						return fmt.Errorf("invalid number of variables for SET command")
 					}
 					cmd = SetCommand{
-						key: v.Array()[1].Bytes(),
-						val: v.Array()[2].Bytes(),
+						Key: v.Array()[1].Bytes(),
+						Val: v.Array()[2].Bytes(),
 					}
-
 				case CommandGet:
 					if len(v.Array()) != 2 {
 						return fmt.Errorf("invalid number of variables for GET command")
 					}
 					cmd = GetCommand{
-						key: v.Array()[1].Bytes(),
+						Key: v.Array()[1].Bytes(),
 					}
+				}
 
-				}
 				p.msgChn <- Message{
-					cmd:  cmd,
-					peer: p,
+					Cmd:  cmd,
+					Peer: p,
 				}
+
 			}
 		}
 	}
-
 	return nil
 }
